@@ -1,6 +1,5 @@
 ### Installation
 
-- [Olama](https://ollama.com/download)
 
 - [Ollama Model](https://ollama.com/library/gemma3)
 

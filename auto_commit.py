@@ -106,12 +106,13 @@ async def main():
 
     all_commit_messages = []
     for file in files:
-        print(f"{file}")
+        # print(f"{file}")
         commit_messages = await diff_single_file(file)
         commit_messages_text = "\n".join(commit_messages)
-        print(f"{commit_messages_text}")
+        # print(f"{commit_messages_text}")
         if commit_single_file:
             await git_commit_everything(commit_messages_text)
+            print(f"{file} --- {commit_messages_text}")
         else:
             all_commit_messages.extend(commit_messages)
     if all_commit_messages and not commit_single_file:

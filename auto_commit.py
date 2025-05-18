@@ -1,7 +1,7 @@
+import asyncio
 import subprocess
 import sys
-from ollama import chat
-from ollama import ChatResponse
+from ollama import AsyncClient
 
 model = "gemma3:4b"
 prompt = f"""
@@ -19,9 +19,11 @@ Instructions:
     2. Summarize all changes into a single logical commit.
     3. Write a concise commit message (max 72 characters) in the conventional commit style
 """
+client = AsyncClient()
 
-def get_changed_files():
-    # Git add all 
+
+async def get_changed_files():
+    # Git add all
     subprocess.run(
         ["git", "add", "."],
         capture_output=True, text=True
@@ -40,7 +42,8 @@ def get_changed_files():
     # Union of both sets
     return sorted(unstaged | staged)
 
-def get_diff_for_file(filename, staged=False):
+
+async def get_diff_for_file(filename, staged=False):
     cmd = ["git", "diff"]
     if staged:
         cmd.append("--staged")
@@ -49,34 +52,38 @@ def get_diff_for_file(filename, staged=False):
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result.stdout
 
-def get_commit_messages(diff, files):
+
+async def get_commit_messages(diff, files):
     # Use the Ollama chat model to get commit messages
     if len(diff) == 0 or len(files) == 0:
         return ""
     try:
-        response: ChatResponse = chat(model=model, messages=[
-        {
-            'role': 'user',
-            'content': prompt.replace("[Git Diff]", diff).replace("[Changed Files and Types]", files),
-        },
-    ])
+        messages = [
+            {
+                'role': 'user',
+                'content': prompt.replace("[Git Diff]", diff).replace("[Changed Files and Types]", files),
+            },
+        ]
+        response = await client.chat(model=model, messages=messages)
         return response['message']['content']
     except Exception:
         return ""
-    
-def diff_single_file(file): 
+
+
+async def diff_single_file(file):
     commit_messages = []
-    unstaged_diff = get_diff_for_file(file, staged=False).strip()
-    staged_diff = get_diff_for_file(file, staged=True).strip()
-    messages_staged_diff = get_commit_messages(staged_diff, file).strip()
-    messages_unstaged_diff = get_commit_messages(unstaged_diff, file).strip()
+    unstaged_diff = (await get_diff_for_file(file, staged=False)).strip()
+    staged_diff = (await get_diff_for_file(file, staged=True)).strip()
+    messages_staged_diff = (await get_commit_messages(staged_diff, file)).strip()
+    messages_unstaged_diff = (await get_commit_messages(unstaged_diff, file)).strip()
     if messages_staged_diff:
         commit_messages.append(messages_staged_diff)
     if messages_unstaged_diff:
         commit_messages.append(messages_unstaged_diff)
     return commit_messages
-    ""
-def git_commit_everything(message):
+
+
+async def git_commit_everything(message):
     """
     Stages all changes (including new, modified, deleted files), commits with the given message,
     and pushes the commit to the current branch on the default remote ('origin').
@@ -87,26 +94,20 @@ def git_commit_everything(message):
     subprocess.run(['git', 'add', '-A'], check=True)
     # Commit with the provided message
     subprocess.run(['git', 'commit', '-m', message], check=True)
-    
-def main():
-    commit_single_file = True if (len(sys.argv) > 1 and sys.argv[1] == "single_file") else False
-    files = get_changed_files()
+
+
+async def main():
+    files = await get_changed_files()
     if not files:
         print("No changes detected.")
         return
 
-    all_commit_messages = []
     for file in files:
         print(f"{file}")
-        commit_messages = diff_single_file(file)
+        commit_messages = await diff_single_file(file)
         commit_messages_text = "\n".join(commit_messages)
         print(f"{commit_messages_text}")
-        if commit_single_file:
-            git_commit_everything(commit_messages_text)
-        else: 
-            all_commit_messages.extend(commit_messages)
-    if all_commit_messages and not commit_single_file:
-        git_commit_everything("\n".join(all_commit_messages))
+        await git_commit_everything(commit_messages_text)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

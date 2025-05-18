@@ -97,26 +97,17 @@ async def git_commit_everything(message):
 
 
 async def main():
-    commit_single_file = True if (
-        len(sys.argv) > 1 and sys.argv[1] == "single_file") else False
     files = await get_changed_files()
     if not files:
         print("No changes detected.")
         return
 
-    all_commit_messages = []
     for file in files:
-        # print(f"{file}")
+        print(f"{file}")
         commit_messages = await diff_single_file(file)
         commit_messages_text = "\n".join(commit_messages)
-        # print(f"{commit_messages_text}")
-        if commit_single_file:
-            await git_commit_everything(commit_messages_text)
-            print(f"{file} --- {commit_messages_text}")
-        else:
-            all_commit_messages.extend(commit_messages)
-    if all_commit_messages and not commit_single_file:
-        await git_commit_everything("\n".join(all_commit_messages))
+        print(f"{commit_messages_text}")
+        await git_commit_everything(commit_messages_text)
 
 if __name__ == "__main__":
     asyncio.run(main())

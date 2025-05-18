@@ -90,7 +90,6 @@ def git_commit_everything(message):
     
 def main():
     commit_single_file = True if (len(sys.argv) > 1 and sys.argv[1] == "single_file") else False
-    print(f"commit_single_file {commit_single_file}")
     files = get_changed_files()
     if not files:
         print("No changes detected.")
@@ -103,10 +102,11 @@ def main():
         commit_messages_text = "\n".join(commit_messages)
         print(f"{commit_messages_text}")
         if commit_single_file:
+            print("Create commit for single file")
             git_commit_everything(commit_messages_text)
         else: 
             all_commit_messages.extend(commit_messages)
-    if all_commit_messages:
+    if all_commit_messages and not commit_single_file:
         single_message = "\n".join(all_commit_messages)
         git_commit_everything(single_message)
 

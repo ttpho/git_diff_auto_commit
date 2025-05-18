@@ -46,3 +46,5 @@ Contributions and ideas are welcome, such as:
 - Modifying the prompt, model, or LLM provider.
 
 - Generating commit messages for individual files or a single message for all files.
+
+- Optimize or refactor...

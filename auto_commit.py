@@ -106,8 +106,7 @@ def main():
         else: 
             all_commit_messages.extend(commit_messages)
     if all_commit_messages and not commit_single_file:
-        single_message = "\n".join(all_commit_messages)
-        git_commit_everything(single_message)
+        git_commit_everything("\n".join(all_commit_messages))
 
 if __name__ == "__main__":
     main()

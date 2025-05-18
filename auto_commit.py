@@ -81,6 +81,8 @@ def git_commit_everything(message):
     Stages all changes (including new, modified, deleted files), commits with the given message,
     and pushes the commit to the current branch on the default remote ('origin').
     """
+    if not message:
+        return
     # Stage all changes (new, modified, deleted)
     subprocess.run(['git', 'add', '-A'], check=True)
     # Commit with the provided message
@@ -102,7 +104,7 @@ def main():
         commit_messages = diff_single_file(file)
         commit_messages_text = "\n".join(commit_messages)
         print(f"{commit_messages_text}")
-        if (commit_single_file):
+        if commit_single_file:
             git_commit_everything(commit_messages_text)
         else: 
             all_commit_messages.extend(commit_messages)

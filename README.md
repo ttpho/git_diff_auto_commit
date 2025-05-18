@@ -22,8 +22,6 @@ ollama run gemma3:4b
 pip install ollama
 ```
 
-
-
 ### Usage
 
 Place the `auto_commit.py` file in the root directory of your project.

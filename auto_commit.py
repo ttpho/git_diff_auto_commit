@@ -20,6 +20,11 @@ Instructions:
 """
 
 def get_changed_files():
+    # Git add all 
+    subprocess.run(
+        ["git", "add", "."],
+        capture_output=True, text=True
+    )
     # Get all staged and unstaged files (excluding untracked)
     result = subprocess.run(
         ["git", "diff", "--name-only"],

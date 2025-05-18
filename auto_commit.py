@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from ollama import chat
 from ollama import ChatResponse
 
@@ -64,7 +65,6 @@ def get_commit_messages(diff, files):
         return ""
     
 def diff_single_file(file): 
-    print(f"{file}")
     commit_messages = []
     unstaged_diff = get_diff_for_file(file, staged=False).strip()
     staged_diff = get_diff_for_file(file, staged=True).strip()
@@ -87,6 +87,10 @@ def git_commit_everything(message):
     subprocess.run(['git', 'commit', '-m', message], check=True)
     
 def main():
+    commit_single_file = False
+    if len(sys.argv) > 1 and sys.argv[1] == "single_file":
+        commit_single_file = True
+
     files = get_changed_files()
     if not files:
         print("No changes detected.")
@@ -94,13 +98,17 @@ def main():
 
     all_commit_messages = []
     for file in files:
+        print(f"{file}")
         commit_messages = diff_single_file(file)
-        all_commit_messages.extend(commit_messages)
-
-    print("Suggested commit messages:")
-    single_message = "\n".join(all_commit_messages)
-    print(single_message)
-    git_commit_everything(single_message)
+        commit_messages_text = "\n".join(commit_messages)
+        print(f"{commit_messages_text}")
+        if (commit_single_file):
+            git_commit_everything(commit_messages_text)
+        else: 
+            all_commit_messages.extend(commit_messages)
+    if all_commit_messages:
+        single_message = "\n".join(all_commit_messages)
+        git_commit_everything(single_message)
 
 if __name__ == "__main__":
     main()

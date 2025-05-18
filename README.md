@@ -33,7 +33,7 @@ If ollama server is running, run the script using the command
 python3 auto_commit.py
 ```
 
-Create commit for each file 
+Create a commit for each file. 
 
 ```
 python3 auto_commit.py single_file

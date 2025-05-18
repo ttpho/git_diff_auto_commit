@@ -89,10 +89,7 @@ def git_commit_everything(message):
     subprocess.run(['git', 'commit', '-m', message], check=True)
     
 def main():
-    commit_single_file = False
-    if len(sys.argv) > 1 and sys.argv[1] == "single_file":
-        commit_single_file = True
-
+    commit_single_file = True if (len(sys.argv) > 1 and sys.argv[1] == "single_file") else False
     files = get_changed_files()
     if not files:
         print("No changes detected.")

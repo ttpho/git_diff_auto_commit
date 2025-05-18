@@ -102,7 +102,6 @@ def main():
         commit_messages_text = "\n".join(commit_messages)
         print(f"{commit_messages_text}")
         if commit_single_file:
-            print("Create commit for single file")
             git_commit_everything(commit_messages_text)
         else: 
             all_commit_messages.extend(commit_messages)

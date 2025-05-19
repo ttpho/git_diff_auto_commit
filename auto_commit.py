@@ -53,29 +53,64 @@ async def get_diff_for_file(filename, staged=False):
     return result.stdout
 
 
-async def get_commit_messages(diff, files):
+async def get_commit_messages(diff, file_with_type):
     # Use the Ollama chat model to get commit messages
-    if len(diff) == 0 or len(files) == 0:
+
+    print(diff)
+    print(file_with_type)
+    if len(diff) == 0 or len(file_with_type) == 0:
         return ""
     try:
         messages = [
             {
                 'role': 'user',
-                'content': prompt.replace("[Git Diff]", diff).replace("[Changed Files and Types]", files),
+                'content': prompt.replace("[Git Diff]", diff).replace("[Changed Files and Types]", file_with_type),
             },
         ]
+        print(messages)
         response = await client.chat(model=model, messages=messages)
         return response['message']['content']
     except Exception:
         return ""
 
 
+def status_file(file_path):
+    """
+    Creates a descriptive commit message for changes to a single file,
+    detecting if it was added, modified, or deleted.
+    """
+    try:
+        # Check if the file is new (not tracked yet)
+        status_new_process = subprocess.run(
+            ['git', 'status', '--porcelain', file_path],
+            capture_output=True, text=True, check=True
+        )
+        if status_new_process.stdout.strip().startswith("??"):
+            return "Add"
+
+        # Check if the file was deleted
+        status_deleted_process = subprocess.run(
+            ['git', 'diff', '--staged', '--name-status', file_path],
+            capture_output=True, text=True, check=True,
+        )
+        if status_deleted_process.stdout.strip().startswith("D"):
+            return "Remove"
+
+        # If not new or deleted, assume it's modified
+        return "Update"
+
+    except:
+        return ""
+
+
 async def diff_single_file(file):
     commit_messages = []
+    status = status_file(file).strip()
+    file_with_type = f"{file} : {status}"
     unstaged_diff = (await get_diff_for_file(file, staged=False)).strip()
     staged_diff = (await get_diff_for_file(file, staged=True)).strip()
-    messages_staged_diff = (await get_commit_messages(staged_diff, file)).strip()
-    messages_unstaged_diff = (await get_commit_messages(unstaged_diff, file)).strip()
+    messages_staged_diff = (await get_commit_messages(staged_diff, file_with_type)).strip()
+    messages_unstaged_diff = (await get_commit_messages(unstaged_diff, file_with_type)).strip()
     if messages_staged_diff:
         commit_messages.append(messages_staged_diff)
     if messages_unstaged_diff:

@@ -96,18 +96,51 @@ async def git_commit_everything(message):
     subprocess.run(['git', 'commit', '-m', message], check=True)
 
 
+async def git_commit_file(file, message):
+    """
+    Stages all changes (including new, modified, deleted files), commits with the given message,
+    and pushes the commit to the current branch on the default remote ('origin').
+    """
+    if not message:
+        return
+
+    try:
+        subprocess.run(['git', 'add', file], check=True)
+    except:
+        print("An exception occurred")
+    # Commit with the provided message
+    subprocess.run(['git', 'commit', file, '-m', message], check=True)
+
+
+async def commit_comment_per_file(files):
+    for file in files:
+        commit_messages = await diff_single_file(file)
+        commit_messages_text = "\n".join(commit_messages)
+        print(f"{file}: {commit_messages_text}")
+        await git_commit_file(file, commit_messages_text)
+
+
+async def comit_comment_all(files):
+    all_message = []
+    for file in files:
+        commit_messages = await diff_single_file(file)
+        commit_messages_text = "\n".join(commit_messages)
+        print(f"{file}: {commit_messages_text}")
+        all_message.extend(commit_messages)
+    await git_commit_everything(message="\n".join(all_message))
+
+
 async def main():
     files = await get_changed_files()
     if not files:
         print("No changes detected.")
         return
-
-    for file in files:
-        print(f"{file}")
-        commit_messages = await diff_single_file(file)
-        commit_messages_text = "\n".join(commit_messages)
-        print(f"{commit_messages_text}")
-        await git_commit_everything(commit_messages_text)
+    is_commit_per_file = True if (
+        len(sys.argv) > 1 and sys.argv[1] == 'single') else False
+    if is_commit_per_file:
+        await commit_comment_per_file(files)
+    else:
+        await comit_comment_all(files)
 
 if __name__ == "__main__":
     asyncio.run(main())

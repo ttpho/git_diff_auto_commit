@@ -55,9 +55,6 @@ async def get_diff_for_file(filename, staged=False):
 
 async def get_commit_messages(diff, file_with_type):
     # Use the Ollama chat model to get commit messages
-
-    print(diff)
-    print(file_with_type)
     if len(diff) == 0 or len(file_with_type) == 0:
         return ""
     try:
@@ -67,7 +64,6 @@ async def get_commit_messages(diff, file_with_type):
                 'content': prompt.replace("[Git Diff]", diff).replace("[Changed Files and Types]", file_with_type),
             },
         ]
-        print(messages)
         response = await client.chat(model=model, messages=messages)
         return response['message']['content']
     except Exception:

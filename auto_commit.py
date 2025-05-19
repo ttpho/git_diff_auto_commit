@@ -83,7 +83,7 @@ async def diff_single_file(file):
     return commit_messages
 
 
-async def git_commit_everything(message):
+async def git_commit_everything(file, message):
     """
     Stages all changes (including new, modified, deleted files), commits with the given message,
     and pushes the commit to the current branch on the default remote ('origin').
@@ -91,9 +91,9 @@ async def git_commit_everything(message):
     if not message:
         return
     # Stage all changes (new, modified, deleted)
-    subprocess.run(['git', 'add', '-A'], check=True)
+    subprocess.run(['git', 'add', file], check=True)
     # Commit with the provided message
-    subprocess.run(['git', 'commit', '-m', message], check=True)
+    subprocess.run(['git', 'commit', file, '-m', message], check=True)
 
 
 async def main():
@@ -103,11 +103,10 @@ async def main():
         return
 
     for file in files:
-        print(f"{file}")
         commit_messages = await diff_single_file(file)
         commit_messages_text = "\n".join(commit_messages)
-        print(f"{commit_messages_text}")
-        await git_commit_everything(commit_messages_text)
+        print(f"{file}: {commit_messages_text}")
+        await git_commit_everything(file, commit_messages_text)
 
 if __name__ == "__main__":
     asyncio.run(main())

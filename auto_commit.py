@@ -104,7 +104,7 @@ async def diff_single_file(file):
     commit_messages = []
     status = status_file(file).strip()
     file_name = os.path.basename(file).strip()
-    file_with_type = f"{status} : {file}"
+    file_with_type = f"{status} : {file_name}"
     unstaged_diff = (await get_diff_for_file(file, staged=False)).strip()
     staged_diff = (await get_diff_for_file(file, staged=True)).strip()
     messages_staged_diff = (await get_commit_messages(staged_diff, file_with_type)).strip()

@@ -24,37 +24,46 @@ Instructions:
 """
 client = AsyncClient()
 
-
-async def get_changed_files():
+async def get_changed_files(repository_path):
     # Git add all
     subprocess.run(
         ["git", "add", "."],
-        capture_output=True, text=True
+        capture_output=True, text=True, cwd=repository_path
     )
     # Get all staged and unstaged files (excluding untracked)
     result = subprocess.run(
         ["git", "diff", "--name-only"],
-        capture_output=True, text=True
+        capture_output=True, text=True, cwd=repository_path
     )
     unstaged = set(result.stdout.splitlines())
     result = subprocess.run(
         ["git", "diff", "--name-only", "--staged"],
-        capture_output=True, text=True
+        capture_output=True, text=True, cwd=repository_path
     )
     staged = set(result.stdout.splitlines())
     # Union of both sets
     return sorted(unstaged | staged)
 
 
-async def get_diff_for_file(filename, staged=False):
+async def get_diff_for_file(file_path, repository_path, staged=False):
     cmd = ["git", "diff"]
     if staged:
         cmd.append("--staged")
     cmd.append("--")
-    cmd.append(filename)
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    cmd.append(file_path)
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=repository_path)
     return result.stdout
 
+def replace_backticks(text):
+  """Replaces all occurrences of ``` with an empty string.
+
+  Args:
+    text: The input string.
+
+  Returns:
+    The string with all ``` delimiters replaced by empty strings.
+  """
+  return text.replace("```", "")
 
 async def get_commit_messages(diff, file_with_type):
     # Use the Ollama chat model to get commit messages
@@ -68,12 +77,13 @@ async def get_commit_messages(diff, file_with_type):
             },
         ]
         response = await client.chat(model=model, messages=messages)
-        return response['message']['content']
+        content = response['message']['content']
+        return replace_backticks(content)
     except Exception:
         return ""
 
 
-def status_file(file_path):
+def status_file(file_path, repository_path):
     """
     Creates a descriptive commit message for changes to a single file,
     detecting if it was added, modified, or deleted.
@@ -82,7 +92,7 @@ def status_file(file_path):
         # Check if the file is new (not tracked yet)
         status_new_process = subprocess.run(
             ['git', 'status', '--porcelain', file_path],
-            capture_output=True, text=True, check=True
+            capture_output=True, text=True, check=True, cwd=repository_path,
         )
         if status_new_process.stdout.strip().startswith("??"):
             return "Add"
@@ -90,7 +100,7 @@ def status_file(file_path):
         # Check if the file was deleted
         status_deleted_process = subprocess.run(
             ['git', 'diff', '--staged', '--name-status', file_path],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, check=True, cwd=repository_path,
         )
         if status_deleted_process.stdout.strip().startswith("D"):
             return "Remove"
@@ -102,13 +112,13 @@ def status_file(file_path):
         return ""
 
 
-async def diff_single_file(file):
+async def diff_single_file(file_path, repository_path):
     commit_messages = []
-    status = status_file(file).strip()
-    file_name = os.path.basename(file).strip()
+    status = status_file(file_path, repository_path).strip()
+    file_name = os.path.basename(file_path).strip()
     file_with_type = f"{status} : {file_name}"
-    unstaged_diff = (await get_diff_for_file(file, staged=False)).strip()
-    staged_diff = (await get_diff_for_file(file, staged=True)).strip()
+    unstaged_diff = (await get_diff_for_file(file_path, repository_path, staged=False)).strip()
+    staged_diff = (await get_diff_for_file(file_path, repository_path, staged=True)).strip()
     messages_staged_diff = (await get_commit_messages(staged_diff, file_with_type)).strip()
     messages_unstaged_diff = (await get_commit_messages(unstaged_diff, file_with_type)).strip()
     if messages_staged_diff:
@@ -118,7 +128,7 @@ async def diff_single_file(file):
     return commit_messages
 
 
-async def git_commit_everything(message):
+async def git_commit_everything(message, repository_path):
     """
     Stages all changes (including new, modified, deleted files), commits with the given message,
     and pushes the commit to the current branch on the default remote ('origin').
@@ -126,12 +136,12 @@ async def git_commit_everything(message):
     if not message:
         return
     # Stage all changes (new, modified, deleted)
-    subprocess.run(['git', 'add', '-A'], check=True)
+    subprocess.run(['git', 'add', '-A'], check=True, cwd=repository_path,)
     # Commit with the provided message
-    subprocess.run(['git', 'commit', '-m', message], check=True)
+    subprocess.run(['git', 'commit', '-m', message], check=True, cwd=repository_path,)
 
 
-async def git_commit_file(file, message):
+async def git_commit_file(file_path, repository_path, message):
     """
     Stages all changes (including new, modified, deleted files), commits with the given message,
     and pushes the commit to the current branch on the default remote ('origin').
@@ -140,42 +150,44 @@ async def git_commit_file(file, message):
         return
 
     try:
-        subprocess.run(['git', 'add', file], check=True)
+        subprocess.run(['git', 'add', file_path], check=True, cwd=repository_path,)
     except:
         print("An exception occurred")
     # Commit with the provided message
-    subprocess.run(['git', 'commit', file, '-m', message], check=True)
+    subprocess.run(['git', 'commit', file_path, '-m', message], check=True, cwd=repository_path,)
 
 
-async def commit_comment_per_file(files):
-    for file in files:
-        commit_messages = await diff_single_file(file)
+async def commit_comment_per_file(all_file_path, repository_path):
+    for file_path in all_file_path:
+        commit_messages = await diff_single_file(file_path, repository_path)
         commit_messages_text = "\n".join(commit_messages)
-        print(f"{file}: {commit_messages_text}")
-        await git_commit_file(file, commit_messages_text)
+        print(f"{file_path}: {commit_messages_text}")
+        await git_commit_file(file_path, repository_path, commit_messages_text)
 
 
-async def comit_comment_all(files):
+async def commit_comment_all(all_file_path, repository_path):
     all_message = []
-    for file in files:
-        commit_messages = await diff_single_file(file)
+    for file_path in all_file_path:
+        commit_messages = await diff_single_file(file_path, repository_path)
         commit_messages_text = "\n".join(commit_messages)
-        print(f"{file}: {commit_messages_text}")
+        print(f"{file_path}: {commit_messages_text}")
         all_message.extend(commit_messages)
-    await git_commit_everything(message="\n".join(all_message))
+    await git_commit_everything(message="\n".join(all_message), repository_path = repository_path)
 
 
 async def main():
-    files = await get_changed_files()
-    if not files:
+    repository_path = sys.argv[1] if len(sys.argv) > 1  else None
+    is_commit_per_file = True if (len(sys.argv) > 2 and sys.argv[2] == 'single') else False
+
+    all_file_path = await get_changed_files(repository_path)
+    if not all_file_path:
         print("No changes detected.")
         return
-    is_commit_per_file = True if (
-        len(sys.argv) > 1 and sys.argv[1] == 'single') else False
+    
     if is_commit_per_file:
-        await commit_comment_per_file(files)
+        await commit_comment_per_file(all_file_path, repository_path)
     else:
-        await comit_comment_all(files)
+        await commit_comment_all(all_file_path, repository_path)
 
 if __name__ == "__main__":
     asyncio.run(main())

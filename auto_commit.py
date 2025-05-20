@@ -6,7 +6,9 @@ from ollama import AsyncClient
 
 model = "gemma3:4b"
 prompt = f"""
-Given the following Git diff and the list of changed files (with file types), suggest a single concise and relevant commit message that best summarizes all the changes made. Use a conventional commit style (e.g., feat:, fix:, chore:, docs:, refactor:). The message should be no longer than 72 characters.
+Given the following Git diff and the list of changed files (with file types), suggest a single concise and relevant commit message that best summarizes all the changes made. 
+Use a conventional commit style (e.g., feat:, fix:, chore:, docs:, refactor:). 
+The message should be no longer than 72 characters.
 Just return the commit messages without any additional text or explanation, without any Markdown formatting.
 Input:
     Git Diff:

@@ -19,6 +19,22 @@
 3. Sends diffs and file info to the LLM via Ollama to generate a commit message.
 4. Commits changes using the generated message(s).
 
+```mermaid
+flowchart TD
+    A[Start] --> B[Parse Arguments]
+    B --> C{Get Changed Files}
+    C -->|No changes| Z[Print "No changes detected."]
+    C -->|Changes found| D{Commit Per File?}
+    D -->|Yes| E[For each file:<br>1. Get diff<br>2. Generate commit message<br>3. Commit file]
+    D -->|No| F[For each file:<br>1. Get diff<br>2. Generate commit message]
+    F --> G[Combine all messages]
+    G --> H[Commit all changes with combined message]
+    E --> I[Done]
+    H --> I
+    Z --> I
+    I[End]
+```
+
 
 ### Installation
 

@@ -55,15 +55,16 @@ async def get_diff_for_file(file_path, repository_path, staged=False):
     return result.stdout
 
 def replace_backticks(text):
-  """Replaces all occurrences of ``` with an empty string.
+  """Replaces all occurrences of ` with an empty string.
 
   Args:
     text: The input string.
 
   Returns:
-    The string with all ``` delimiters replaced by empty strings.
+    The string with all ` delimiters replaced by empty strings.
   """
-  return text.replace("```", "")
+  func = lambda s: s[:1].lower() + s[1:] if s else ''
+  return func(text.replace("`", "")).strip()
 
 async def get_commit_messages(diff, file_with_type):
     # Use the Ollama chat model to get commit messages
